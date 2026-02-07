@@ -4,7 +4,8 @@ export const api = createApi({
   reducerPath: "api",
   baseQuery: fetchBaseQuery({
     // baseUrl: "http://localhost:5000/api",
-    baseUrl: "https://image-gallery-server-u2t2.onrender.com/api",
+    // baseUrl: "https://image-gallery-server-u2t2.onrender.com/api",
+      baseUrl: import.meta.env.VITE_API_URL,
     prepareHeaders: (headers) => {
       const token = localStorage.getItem("token");
       if (token) {
