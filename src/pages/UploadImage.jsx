@@ -1,245 +1,179 @@
 import { useState } from "react";
-import { Upload, X, Tag } from "lucide-react";
-import { useUploadImageMutation } from "../features/images/imageApi";
+import { Upload, X } from "lucide-react";
+import { useUploadImageMutation, useUploadBulkImagesMutation } from "../features/images/imageApi";
+import toast from "react-hot-toast";
 
 const UploadImage = () => {
-  const [uploadImage, { isLoading }] = useUploadImageMutation();
-  const [preview, setPreview] = useState(null);
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    tags: ""
-  });
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadImage] = useUploadImageMutation();
+  const [uploadBulkImages] = useUploadBulkImagesMutation();
 
-  const handleFileChange = (e) => {
+  const [singlePreview, setSinglePreview] = useState(null);
+  const [bulkPreviews, setBulkPreviews] = useState([]);
+  const [title, setTitle] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+
+  // Handle single file selection
+  const handleSingleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       setSelectedFile(file);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result);
-      };
+      reader.onloadend = () => setSinglePreview(reader.result);
       reader.readAsDataURL(file);
     }
   };
 
- const handleSubmit = async (e) => {
-  e.preventDefault();
-  
-  if (!selectedFile) {
-    alert("Please select an image");
-    return;
-  }
+  // Handle multiple files selection
+  const handleMultipleFilesChange = (e) => {
+    const files = Array.from(e.target.files);
+    setSelectedFiles(files);
 
-  if (!formData.title.trim()) {
-    alert("Please enter image title");
-    return;
-  }
+    // Previews
+    const previews = files.map((file) => {
+      const reader = new FileReader();
+      return new Promise((resolve) => {
+        reader.onloadend = () => resolve({ file, preview: reader.result });
+        reader.readAsDataURL(file);
+      });
+    });
 
-  try {
-    const uploadFormData = new FormData();
-    uploadFormData.append("image", selectedFile);
-    uploadFormData.append("title", formData.title);
-    
-    if (formData.description) {
-      uploadFormData.append("description", formData.description);
+    Promise.all(previews).then(setBulkPreviews);
+  };
+
+  // Submit single image
+  const handleSingleSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedFile || !title.trim()) return toast.error("Select image & add title");
+
+    try {
+      const formData = new FormData();
+      formData.append("image", selectedFile);
+      formData.append("title", title);
+
+      const response = await uploadImage(formData).unwrap();
+      toast.success(response.message || "Image uploaded!");
+      // Reset
+      setSinglePreview(null);
+      setSelectedFile(null);
+      setTitle("");
+    } catch (err) {
+      toast.error(err.data?.message || "Upload failed");
     }
-    
-    if (formData.tags) {
-      uploadFormData.append("tags", formData.tags);
-    }
+  };
 
-    // Debug: Check FormData content
-    console.log("FormData entries:");
-    for (let [key, value] of uploadFormData.entries()) {
-      console.log(key, value);
-    }
+  // Submit multiple images
+  const handleBulkSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedFiles.length) return toast.error("Select images");
 
-    const response = await uploadImage(uploadFormData).unwrap();
-    console.log("Upload response:", response);
-    
-    alert("Image uploaded successfully!");
-    
-    // Reset form
-    setPreview(null);
-    setSelectedFile(null);
-    setFormData({ title: "", description: "", tags: "" });
-    
-    // Clear file input
-    const fileInput = document.querySelector('input[type="file"]');
-    if (fileInput) fileInput.value = "";
-    
-  } catch (error) {
-    console.error("Upload error details:", error);
-    alert("Upload failed: " + (error.data?.message || error.error || "Something went wrong"));
-  }
-};
+    try {
+      const formData = new FormData();
+      selectedFiles.forEach((file) => formData.append("images", file));
+
+      const response = await uploadBulkImages(formData).unwrap();
+      toast.success(response.message || "Images uploaded!");
+      // Reset
+      setSelectedFiles([]);
+      setBulkPreviews([]);
+    } catch (err) {
+      toast.error(err.data?.message || "Bulk upload failed");
+    }
+  };
+
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-800">Upload Image</h1>
-        <p className="text-gray-600">Upload new images to Cloudinary</p>
-      </div>
+    <div className="max-w-5xl mx-auto p-6">
+      <h1 className="text-3xl font-bold mb-6">Upload Images</h1>
 
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Upload Area */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Image *
-                </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors">
-                  {preview ? (
-                    <div className="relative">
-                      <img
-                        src={preview}
-                        alt="Preview"
-                        className="max-h-64 mx-auto rounded-lg object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPreview(null);
-                          setSelectedFile(null);
-                        }}
-                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
-                      >
-                        <X size={20} />
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <Upload className="mx-auto text-gray-400 mb-4" size={48} />
-                      <p className="text-gray-600 mb-2">
-                        Drag & drop your image here
-                      </p>
-                      <p className="text-sm text-gray-500 mb-4">OR</p>
-                      <label className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors">
-                        Browse Files
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleFileChange}
-                          required
-                        />
-                      </label>
-                    </>
-                  )}
-                </div>
-                <p className="text-sm text-gray-500 mt-2">
-                  Supports JPG, PNG, WebP, GIF up to 5MB
-                </p>
-              </div>
-
-              {/* Form Fields */}
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Image Title *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter image title"
-                    value={formData.title}
-                    onChange={(e) =>
-                      setFormData({ ...formData, title: e.target.value })
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    rows="3"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter image description (optional)"
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                    <Tag size={16} />
-                    Tags
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="nature, landscape, portrait (comma separated)"
-                    value={formData.tags}
-                    onChange={(e) =>
-                      setFormData({ ...formData, tags: e.target.value })
-                    }
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Separate tags with commas
-                  </p>
-                </div>
-
-                <div className="pt-4">
+      {/* Single Image Upload */}
+      <div className="bg-white p-6 rounded-xl shadow mb-8">
+        <h2 className="text-xl font-semibold mb-4">Single Image Upload</h2>
+        <form onSubmit={handleSingleSubmit} className="grid lg:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium mb-2">Image *</label>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
+              {singlePreview ? (
+                <div className="relative">
+                  <img src={singlePreview} alt="Preview" className="max-h-64 mx-auto rounded-lg object-cover" />
                   <button
-                    type="submit"
-                    disabled={isLoading || !selectedFile}
-                    className="w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
+                    type="button"
+                    onClick={() => {
+                      setSinglePreview(null);
+                      setSelectedFile(null);
+                    }}
+                    className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
                   >
-                    {isLoading ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Uploading to Cloudinary...
-                      </>
-                    ) : (
-                      <>
-                        <Upload size={20} />
-                        Upload Image
-                      </>
-                    )}
+                    <X size={20} />
                   </button>
                 </div>
-              </div>
+              ) : (
+                <label className="cursor-pointer inline-block text-blue-600 hover:text-blue-800">
+                  <Upload className="mx-auto mb-2" size={36} />
+                  Browse Image
+                  <input type="file" accept="image/*" className="hidden" onChange={handleSingleFileChange} />
+                </label>
+              )}
             </div>
-          </form>
-        </div>
+          </div>
+          <div className="space-y-4">
+            <input
+              type="text"
+              placeholder="Image Title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              type="submit"
+              className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Upload Image
+            </button>
+          </div>
+        </form>
+      </div>
 
-        {/* Guidelines */}
-        <div className="mt-8 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
-          <h3 className="font-medium text-blue-800 mb-3 flex items-center gap-2">
-            <Upload size={18} />
-            Upload Guidelines
-          </h3>
-          <ul className="space-y-2 text-sm text-blue-700">
-            <li className="flex items-start gap-2">
-              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5"></div>
-              <span>Use descriptive titles for better searchability</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5"></div>
-              <span>Optimal image size: 1200x800 pixels (auto-resized)</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5"></div>
-              <span>Maximum file size: 5MB per image</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5"></div>
-              <span>Allowed formats: JPG, PNG, WebP, GIF</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5"></div>
-              <span>Images are automatically optimized and stored on Cloudinary</span>
-            </li>
-          </ul>
-        </div>
+      {/* Multiple Images Upload */}
+      <div className="bg-white p-6 rounded-xl shadow">
+        <h2 className="text-xl font-semibold mb-4">Multiple Images Upload</h2>
+        <form onSubmit={handleBulkSubmit}>
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
+            {bulkPreviews.length ? (
+              <div className="flex flex-wrap gap-4 justify-center">
+                {bulkPreviews.map((p, idx) => (
+                  <div key={idx} className="relative">
+                    <img src={p.preview} alt="Preview" className="w-32 h-32 object-cover rounded-lg" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = bulkPreviews.filter((_, i) => i !== idx);
+                        setBulkPreviews(updated);
+                        setSelectedFiles(selectedFiles.filter((_, i) => i !== idx));
+                      }}
+                      className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <label className="cursor-pointer inline-block text-blue-600 hover:text-blue-800">
+                <Upload className="mx-auto mb-2" size={36} />
+                Select Images
+                <input type="file" multiple accept="image/*" className="hidden" onChange={handleMultipleFilesChange} />
+              </label>
+            )}
+          </div>
+          {bulkPreviews.length > 0 && (
+            <button
+              type="submit"
+              className="mt-4 w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            >
+              Upload {bulkPreviews.length} Images
+            </button>
+          )}
+        </form>
       </div>
     </div>
   );

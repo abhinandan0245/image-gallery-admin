@@ -2,9 +2,14 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAdminLoginMutation } from "../features/auth/authApi";
 import { Lock, Mail, Eye, EyeOff } from "lucide-react";
+import { useDispatch } from "react-redux";
+import { setCredentials } from "../features/auth/authSlice";
+import toast from "react-hot-toast";
+
 
 const Login = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [adminLogin, { isLoading }] = useAdminLoginMutation();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -12,16 +17,26 @@ const Login = () => {
     password: ""
   });
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await adminLogin(formData).unwrap();
-      localStorage.setItem("token", response.token);
-      navigate("/upload");
-    } catch (error) {
-      alert(error.data?.message || "Login failed");
-    }
-  };
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  try {
+    const response = await adminLogin(formData).unwrap();
+    toast.success( response?.message || "Login successful!");
+
+    // Store in Redux (this also stores in localStorage)
+    dispatch(setCredentials({
+      token: response.token,
+      admin: response.admin
+    }));
+
+    navigate("/upload");
+
+  } catch (error) {
+    toast.error(error.data?.message || "Login failed");
+  }
+};
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">

@@ -18,11 +18,30 @@ export const authApi = api.injectEndpoints({
         method: "POST",
         body: data
       })
-    })
+    }),
+    getAdminProfile: builder.query({
+  query: () => ({
+    url: "/admin/profile",
+    method: "GET",
+  }),
+  providesTags: ["AdminProfile"],
+}),
+
+updateProfile: builder.mutation({
+  query: (data) => ({
+    url: "/admin/profile",
+    method: "PUT",
+    body: data,
+  }),
+  invalidatesTags: ["AdminProfile"],
+}),
+
   })
-});
+});   
 
 export const {
   useAdminLoginMutation,
-  useAdminRegisterMutation
+  useAdminRegisterMutation,
+  useGetAdminProfileQuery,
+  useUpdateProfileMutation
 } = authApi;

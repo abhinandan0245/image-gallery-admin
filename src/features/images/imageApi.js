@@ -4,14 +4,23 @@ export const imageApi = api.injectEndpoints({
   endpoints: (builder) => ({
 
     getImages: builder.query({
-      query: () => "/images",
-      providesTags: ["Image"]
-    }),
+  query: ({ page = 1, limit = 10, sort = "newest" }) =>
+    `/images?page=${page}&limit=${limit}&sort=${sort}`,
+}),
+
 
     // 🔥 FIXED UPLOAD
     uploadImage: builder.mutation({
       query: (formData) => ({
         url: "/images",
+        method: "POST",
+        body: formData
+      }),
+      invalidatesTags: ["Image"]
+    }),
+    uploadBulkImages: builder.mutation({
+      query: (formData) => ({
+        url: "/images/upload-multiple",
         method: "POST",
         body: formData
       }),
@@ -42,5 +51,6 @@ export const {
   useGetImagesQuery,
   useUploadImageMutation,
   useUpdateImageMutation,
-  useDeleteImageMutation
+  useDeleteImageMutation,
+  useUploadBulkImagesMutation
 } = imageApi;

@@ -11,6 +11,7 @@ import {
   ChevronDown,
   Settings
 } from "lucide-react";
+import { useGetAdminProfileQuery } from "../features/auth/authApi";
 
 const Navbar = () => {
   const dispatch = useDispatch();
@@ -18,6 +19,7 @@ const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+   const { data, isLoading, isError } = useGetAdminProfileQuery();
 
   // Handle scroll for shadow effect
   useEffect(() => {
@@ -57,7 +59,7 @@ const Navbar = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
               <input
                 type="text"
-                placeholder="Search images, users, settings..."
+                placeholder="Search..."
                 className="pl-10 pr-4 py-2 w-64 lg:w-80 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />
             </div>
@@ -76,8 +78,9 @@ const Navbar = () => {
                 onClick={() => setShowDropdown(!showDropdown)}
                 className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-xl transition-colors"
               >
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold shadow-md">
-                  {admin?.name?.charAt(0) || "A"}
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500  to-purple-500 rounded-full  border-gray-100 border-2 flex items-center justify-center text-white font-semibold shadow-md">
+                  {/* {admin?.name?.charAt(0) || "A"} */}
+                 <img src={admin?.profileImage} alt="profile image"   className="rounded-full"/>
                 </div>
                 <div className="hidden md:block text-left">
                   <p className="font-medium text-gray-800">{admin?.name || "Admin"}</p>

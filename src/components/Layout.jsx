@@ -30,13 +30,13 @@ const Layout = () => {
       <div className="flex-1 flex flex-col min-h-screen">
         <Navbar />
         <main className="flex-1 p-4 md:p-6 overflow-auto">
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-8xl mx-auto">
             <Outlet />
           </div>
         </main>
         
         {/* Footer */}
-        <footer className="bg-white border-t py-4 px-6">
+        <footer className="bg-white border-t border-gray-200 py-4 px-6">
           <div className="flex flex-col md:flex-row justify-between items-center text-sm text-gray-600">
             <p>© {new Date().getFullYear()} Image Gallery Admin. All rights reserved.</p>
             <div className="flex gap-4 mt-2 md:mt-0">

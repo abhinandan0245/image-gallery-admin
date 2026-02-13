@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { DataTable } from "mantine-datatable";
 import {
   useGetImagesQuery,
   useDeleteImageMutation,
@@ -6,159 +7,204 @@ import {
 } from "../features/images/imageApi";
 import Swal from "sweetalert2";
 
-const ImageManagement = () => {
-  const { data: images = [], isLoading } = useGetImagesQuery();
-  const [deleteImage] = useDeleteImageMutation();
-  const [updateImage] = useUpdateImageMutation();
+const PAGE_SIZE = 10;
 
+const ImageManagement = () => {
+   /* ---------------- State ---------------- */
+  const [page, setPage] = useState(1);
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState("");
 
-  const handleDelete = async (id) => {
-  const result = await Swal.fire({
-    title: "Are you sure?",
-    text: "This image will be permanently deleted!",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#dc2626",
-    cancelButtonColor: "#6b7280",
-    confirmButtonText: "Yes, delete it",
-    cancelButtonText: "Cancel"
+  const [sortStatus, setSortStatus] = useState({
+    columnAccessor: "title",
+    direction: "asc"
   });
 
-  if (result.isConfirmed) {
+  /* ---------------- API ---------------- */
+  const { data, isLoading } = useGetImagesQuery({
+    page,
+    limit: PAGE_SIZE,
+  });
+
+  const [deleteImage] = useDeleteImageMutation();
+  const [updateImage] = useUpdateImageMutation();
+
+  /* ---------------- Derived Data ---------------- */
+  const images = data?.images ?? [];
+  const total = data?.total ?? 0;
+
+  /* ---------------- Sorted Records ---------------- */
+  const records = useMemo(() => {
+  if (!sortStatus.columnAccessor) return images;
+
+  const sorted = [...images].sort((a, b) => {
+    const aValue = a[sortStatus.columnAccessor];
+    const bValue = b[sortStatus.columnAccessor];
+
+    if (aValue == null) return 1;
+    if (bValue == null) return -1;
+
+    return String(aValue).localeCompare(String(bValue), undefined, {
+      numeric: true,
+      sensitivity: "base"
+    });
+  });
+
+  return sortStatus.direction === "desc" ? sorted.reverse() : sorted;
+}, [images, sortStatus]);
+
+
+  /* ---------------- Delete ---------------- */
+  const handleDelete = async (id) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "This image will be permanently deleted!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Yes, delete it",
+      cancelButtonText: "Cancel"
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       await deleteImage(id).unwrap();
-
       Swal.fire({
         title: "Deleted!",
-        text: "Image has been deleted successfully.",
         icon: "success",
         timer: 1500,
         showConfirmButton: false
       });
-    } catch (error) {
+    } catch {
       Swal.fire({
         title: "Error!",
         text: "Failed to delete image.",
         icon: "error"
       });
     }
-  }
-};
+  };
 
-
+  /* ---------------- Edit / Update ---------------- */
   const handleEdit = (image) => {
     setEditingId(image._id);
     setEditTitle(image.title);
   };
 
   const handleUpdate = async (id) => {
-    await updateImage({ id, title: editTitle });
-    setEditingId(null);
-    setEditTitle("");
+    if (!editTitle.trim()) return;
+
+    try {
+      await updateImage({ id, title: editTitle }).unwrap();
+      setEditingId(null);
+      setEditTitle("");
+    } catch {
+      Swal.fire({
+        title: "Error!",
+        text: "Failed to update image title.",
+        icon: "error"
+      });
+    }
   };
 
   return (
     <>
       <h1 className="text-2xl font-bold mb-6">Image Management</h1>
 
-      {isLoading ? (
-        <p>Loading images...</p>
-      ) : (
-        <div className="overflow-x-auto bg-white rounded-lg shadow">
-          <table className="min-w-full border border-gray-200">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Image</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Title</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">
-                  Uploaded By
-                </th>
-                <th className="px-4 py-3 text-center text-sm font-semibold">
-                  Actions
-                </th>
-              </tr>
-            </thead>
+      <DataTable
+        idAccessor="_id"
+        records={records}
+        fetching={isLoading}
 
-            <tbody>
-              {images.map((image) => (
-                <tr key={image._id} className="border-t">
-                  <td className="px-4 py-3">
-                    <img
-                      src={image.imageUrl}
-                      alt={image.title}
-                      className="h-16 w-24 object-cover rounded"
-                    />
-                  </td>
+        withTableBorder
+        withColumnBorders
+        striped
+        highlightOnHover
 
-                  <td className="px-4 py-3">
-                    {editingId === image._id ? (
-                      <input
-                        type="text"
-                        value={editTitle}
-                        onChange={(e) => setEditTitle(e.target.value)}
-                        className="border px-2 py-1 rounded w-full"
-                      />
-                    ) : (
-                      <span>{image.title}</span>
-                    )}
-                  </td>
+        page={page}
+        onPageChange={setPage}
+        recordsPerPage={PAGE_SIZE}
+        totalRecords={total}
 
-                  <td className="px-4 py-3 text-sm text-gray-600">
-                    {image.uploadedBy}
-                  </td>
+        sortStatus={sortStatus}
+        onSortStatusChange={setSortStatus}
 
-                  <td className="px-4 py-3 text-center space-x-2">
-                    {editingId === image._id ? (
-                      <>
-                        <button
-                          onClick={() => handleUpdate(image._id)}
-                          className="px-3 py-1 bg-green-600 text-white rounded text-sm"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => setEditingId(null)}
-                          className="px-3 py-1 bg-gray-400 text-white rounded text-sm"
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => handleEdit(image)}
-                          className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(image._id)}
-                          className="px-3 py-1 bg-red-600 text-white rounded text-sm"
-                        >
-                          Delete
-                        </button>
-                      </>
-                    )}
-                  </td>
-                </tr>
-              ))}
+        noRecordsText="No images found"
 
-              {images.length === 0 && (
-                <tr>
-                  <td
-                    colSpan="4"
-                    className="px-4 py-6 text-center text-gray-500"
+        columns={[
+          {
+            accessor: "imageUrl",
+            title: "Image",
+            sortable: false,
+            render: (image) => (
+              <img
+                src={image.imageUrl}
+                alt={image.title}
+                className="h-16 w-24 object-cover rounded"
+              />
+            )
+          },
+          {
+            accessor: "title",
+            title: "Title",
+            sortable: true,
+            render: (image) =>
+              editingId === image._id ? (
+                <input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="border px-2 py-1 rounded w-full"
+                />
+              ) : (
+                image.title
+              )
+          },
+          {
+            accessor: "uploadedBy",
+            title: "Uploaded By",
+            sortable: true
+          },
+          {
+            accessor: "actions",
+            title: "Actions",
+            sortable: false,
+            textAlign: "center",
+            render: (image) =>
+              editingId === image._id ? (
+                <div className="flex justify-center gap-2">
+                  <button
+                    onClick={() => handleUpdate(image._id)}
+                    className="px-3 py-1 bg-green-600 text-white rounded text-sm"
                   >
-                    No images found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+                    Save
+                  </button>
+                  <button
+                    onClick={() => setEditingId(null)}
+                    className="px-3 py-1 bg-gray-400 text-white rounded text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div className="flex justify-center gap-2">
+                  <button
+                    onClick={() => handleEdit(image)}
+                    className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(image._id)}
+                    className="px-3 py-1 bg-red-600 text-white rounded text-sm"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )
+          }
+        ]}
+      />
     </>
   );
 };

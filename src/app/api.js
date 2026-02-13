@@ -7,13 +7,13 @@ export const api = createApi({
     // baseUrl: "https://image-gallery-server-u2t2.onrender.com/api",
       baseUrl: import.meta.env.VITE_API_URL,
     prepareHeaders: (headers) => {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("admin-token");
       if (token) {
         headers.set("authorization", `Bearer ${token}`);
       }
       return headers;
     }
   }),
-  tagTypes: ["Image"],
+  tagTypes: ["Image" , "AdminProfile"],
   endpoints: () => ({})
 });

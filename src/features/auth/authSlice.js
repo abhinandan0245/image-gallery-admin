@@ -1,9 +1,23 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+const LOCAL_STORAGE_TOKEN_KEY = "admin-token";
+const LOCAL_STORAGE_ADMIN_KEY = "admin";
+
+const parseJSON = (value) => {
+  try {
+    return value ? JSON.parse(value) : null;
+  } catch {
+    return null;
+  }
+};
+
+const storedToken = localStorage.getItem(LOCAL_STORAGE_TOKEN_KEY);
+const storedAdmin = localStorage.getItem(LOCAL_STORAGE_ADMIN_KEY);
+
 const initialState = {
-  token: localStorage.getItem("token") || null,
-  admin: JSON.parse(localStorage.getItem("admin")) || null,
-  isAuthenticated: !!localStorage.getItem("token")
+  token: storedToken || null,
+  admin: parseJSON(storedAdmin),
+  isAuthenticated: !!storedToken
 };
 
 const authSlice = createSlice({
@@ -15,40 +29,27 @@ const authSlice = createSlice({
       state.token = token;
       state.admin = admin;
       state.isAuthenticated = true;
-      localStorage.setItem("token", token);
-      localStorage.setItem("admin", JSON.stringify(admin));
+      localStorage.setItem(LOCAL_STORAGE_TOKEN_KEY, token);
+      localStorage.setItem(LOCAL_STORAGE_ADMIN_KEY, JSON.stringify(admin));
     },
-    
     updateProfile: (state, action) => {
       state.admin = { ...state.admin, ...action.payload };
-      localStorage.setItem("admin", JSON.stringify(state.admin));
+      localStorage.setItem(LOCAL_STORAGE_ADMIN_KEY, JSON.stringify(state.admin));
     },
-    
     logout: (state) => {
       state.token = null;
       state.admin = null;
       state.isAuthenticated = false;
-      localStorage.removeItem("token");
-      localStorage.removeItem("admin");
+      localStorage.removeItem(LOCAL_STORAGE_TOKEN_KEY);
+      localStorage.removeItem(LOCAL_STORAGE_ADMIN_KEY);
     },
-    
     clearError: (state) => {
       state.error = null;
     }
-  },
-  
-  extraReducers: (builder) => {
-    // You can add extra reducers for async actions here if needed
   }
 });
 
-export const { 
-  setCredentials, 
-  updateProfile, 
-  logout, 
-  clearError 
-} = authSlice.actions;
-
+export const { setCredentials, updateProfile, logout, clearError } = authSlice.actions;
 export default authSlice.reducer;
 
 // Selectors

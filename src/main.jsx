@@ -5,11 +5,20 @@ import { BrowserRouter } from "react-router-dom";
 import { store } from "./app/store";
 import App from "./App";
 import "./index.css";
+import { MantineProvider } from "@mantine/core";
+import "@mantine/core/styles.css";
+import "mantine-datatable/styles.css";
+
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <Provider store={store}>
     <BrowserRouter>
+       <MantineProvider
+      withGlobalStyles
+      withNormalizeCSS
+    >
       <App />
+    </MantineProvider>
     </BrowserRouter>
   </Provider>
 );

@@ -9,7 +9,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Home,
-  LogOut
+  LogOut,
+  Image
 } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { logout } from "../features/auth/authSlice";
@@ -24,20 +25,17 @@ const Sidebar = () => {
    
   ];
 
-  const handleLogout = () => {
-    dispatch(logout());
-    window.location.href = "/login";
-  };
+ 
 
   return (
-    <aside className={`${isCollapsed ? 'w-20' : 'w-64'} bg-white border-r shadow-sm transition-all duration-300 ease-in-out h-screen sticky top-0`}>
+    <aside className={`${isCollapsed ? 'w-20' : 'w-64'} bg-white border-r border-gray-100 shadow-sm transition-all duration-300 ease-in-out h-screen sticky top-0`}>
       <div className="p-4">
         {/* Logo and Toggle Button */}
         <div className={`flex ${isCollapsed ? 'justify-center' : 'justify-between'} items-center mb-8`}>
           {!isCollapsed && (
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
-                <Home className="text-white" size={22} />
+                <Image className="text-white" size={22} />
               </div>
               <div>
                 <h2 className="font-bold text-gray-800">Admin Panel</h2>
@@ -48,13 +46,13 @@ const Sidebar = () => {
           
           {isCollapsed && (
             <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
-              <Home className="text-white" size={22} />
+              <Image className="text-white" size={22} />
             </div>
           )}
           
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
           >
             {isCollapsed ? (
               <ChevronRight size={20} className="text-gray-600" />
